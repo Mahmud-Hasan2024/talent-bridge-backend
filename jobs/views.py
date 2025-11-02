@@ -11,6 +11,8 @@ from jobs.permissions import IsAdminOrEmployer
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
 
 
 # Create your views here.
@@ -44,7 +46,7 @@ class JobViewSet(ModelViewSet):
         return super().retrieve(request, *args, **kwargs)
     
     
-    @action(detail=False, methods=["get"], url_path="featured", pagination_class=None)
+    @action(detail=False, methods=["get"], url_path="featured", pagination_class=None, permission_classes=[AllowAny])
     def featured(self, request):
         """
         Return all featured jobs WITHOUT pagination.
