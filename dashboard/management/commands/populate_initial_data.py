@@ -13,6 +13,72 @@ import random
 
 random.seed(42)
 
+LOCATIONS = [
+    "Dhaka", "Chittagong", "Khulna", "Rajshahi", "Sylhet", "Barisal", "Comilla", "Mymensingh"
+]
+
+JOB_TITLES = {
+    "Software Development": [
+        "Backend Developer", "Frontend Developer", "Full Stack Engineer",
+        "Python Developer", "Java Developer", "Mobile App Developer"
+    ],
+    "Digital Marketing": [
+        "SEO Specialist", "Social Media Manager", "Content Strategist",
+        "Digital Marketing Executive", "Email Marketing Specialist"
+    ],
+    "Finance & Accounting": [
+        "Accountant", "Financial Analyst", "Auditor",
+        "Tax Consultant", "Payroll Specialist"
+    ],
+    "Graphic Design": [
+        "UI/UX Designer", "Motion Graphics Designer", "Visual Designer",
+        "Illustrator", "Brand Designer"
+    ],
+    "Data Science": [
+        "Data Analyst", "Machine Learning Engineer", "Data Scientist",
+        "Business Intelligence Analyst", "AI Engineer"
+    ],
+    "Cybersecurity": [
+        "Security Analyst", "Penetration Tester", "SOC Engineer",
+        "Network Security Engineer", "Incident Response Specialist"
+    ],
+    "Customer Support": [
+        "Customer Service Representative", "Call Center Executive",
+        "Support Agent", "Client Relations Specialist"
+    ],
+    "Human Resources": [
+        "HR Manager", "Recruitment Specialist", "Talent Acquisition Coordinator",
+        "HR Executive"
+    ],
+    "Legal": [
+        "Corporate Lawyer", "Legal Advisor", "Compliance Officer",
+        "Contract Specialist"
+    ],
+    "Healthcare": [
+        "Nurse", "Medical Technician", "Telemedicine Consultant",
+        "Healthcare Coordinator"
+    ],
+    "Education & Training": [
+        "Teacher", "Trainer", "E-learning Specialist",
+        "Education Coordinator"
+    ],
+    "Logistics & Supply Chain": [
+        "Warehouse Manager", "Logistics Coordinator", "Procurement Specialist",
+        "Shipping Executive"
+    ],
+    "Hospitality & Tourism": [
+        "Hotel Manager", "Travel Consultant", "Restaurant Supervisor",
+        "Tour Guide"
+    ],
+    "Media & Journalism": [
+        "Reporter", "Editor", "Content Creator", "Social Media Manager"
+    ],
+    "Sales & Business Development": [
+        "Sales Executive", "Account Manager", "Business Development Manager",
+        "Key Account Executive"
+    ],
+}
+
 def _set_timestamp_if_field_exists(obj, dt):
     """Set timestamp fields like created_at, posted_at, applied_at if they exist."""
     timestamp_fields = [
@@ -127,81 +193,61 @@ class Command(BaseCommand):
             seekers.append(s)
 
         # -----------------------
-        # JOB CATEGORIES (~15)
+        # JOB CATEGORIES
         # -----------------------
         self.stdout.write("📂 Creating job categories...")
-        categories_info = [
-            ("Software Development", "Backend, frontend, full-stack roles."),
-            ("Digital Marketing", "SEO, SEM, content marketing, social media."),
-            ("Finance & Accounting", "Accounting, auditing, financial analysis."),
-            ("Graphic Design", "UI/UX designers, motion graphics, visual artists."),
-            ("Data Science", "Data analysis, ML, AI, big data."),
-            ("Cybersecurity", "SOC analysts, penetration testers, security engineers."),
-            ("Customer Support", "Call center, live chat, customer success."),
-            ("Human Resources", "Recruitment, HR operations, talent management."),
-            ("Legal", "Corporate, compliance, and legal advisory roles."),
-            ("Healthcare", "Nursing, medical technicians, telemedicine."),
-            ("Education & Training", "Teachers, trainers, e-learning specialists."),
-            ("Logistics & Supply Chain", "Warehouse, shipping, procurement roles."),
-            ("Hospitality & Tourism", "Hotels, restaurants, travel agencies."),
-            ("Media & Journalism", "Reporters, editors, social media managers."),
-            ("Sales & Business Development", "Sales executives, account managers."),
-        ]
         categories = {}
-        for idx, (name, desc) in enumerate(categories_info):
-            c = JobCategory.objects.create(name=name, description=desc)
-            _set_timestamp_if_field_exists(c, now - timedelta(days=200 - idx*10))
+        for name, titles in JOB_TITLES.items():
+            c = JobCategory.objects.create(name=name, description=f"Jobs related to {name}.")
+            _set_timestamp_if_field_exists(c, now - timedelta(days=random.randint(50,200)))
             categories[name] = c
 
         # -----------------------
         # JOBS (~55)
         # -----------------------
         self.stdout.write("💼 Creating jobs (~55 jobs)...")
-        jobs_data = []
-        # Let's generate multiple jobs per employer, multiple categories
-        featured_count = 0
-        for emp_idx in range(len(employers)):
-            for cat_idx, cat_name in enumerate(categories.keys()):
-                title = f"{cat_name} Specialist {emp_idx+1}-{cat_idx+1}"
-                description = f"Exciting role in {cat_name} at {employers[emp_idx].first_name}."
-                requirements = f"Required skills for {cat_name}."
-                is_featured = False
-                # Make first 10 jobs featured
-                if featured_count < 10:
-                    is_featured = True
-                    featured_count += 1
-                employment_type = random.choice(["full_time","part_time","contract"])
-                experience_level = random.choice(["entry_level","mid_level","senior_level"])
-                remote_option = random.choice(["on_site","remote","hybrid"])
-                salary = random.randint(40000,150000)
-                jobs_data.append((emp_idx, title, employers[emp_idx].first_name, description, requirements, cat_name, is_featured, employment_type, experience_level, remote_option, salary))
-                if len(jobs_data) >= 55:
-                    break
-            if len(jobs_data) >= 55:
-                break
-
         jobs = []
-        for jd in jobs_data:
-            (employer_idx, title, company_name, description, requirements,
-             category_name, is_featured, employment_type, experience_level,
-             remote_option, salary) = jd
+        featured_jobs_needed = 10
+        jobs_created = 0
 
-            job = Job.objects.create(
-                employer=employers[employer_idx],
-                title=title,
-                company_name=company_name,
-                description=description,
-                requirements=requirements,
-                category=categories[category_name],
-                is_featured=is_featured,
-                employment_type=employment_type,
-                experience_level=experience_level,
-                remote_option=remote_option,
-                salary=salary
-            )
-            posted_dt = now - timedelta(days=random.randint(10, 60))
-            _set_timestamp_if_field_exists(job, posted_dt)
-            jobs.append(job)
+        while jobs_created < 55:
+            for emp in employers:
+                for cat_name, titles in JOB_TITLES.items():
+                    title = random.choice(titles)
+                    description = f"Exciting {title} role at {emp.first_name}."
+                    requirements = f"Skills required: {title}."
+                    is_featured = False
+                    if featured_jobs_needed > 0:
+                        is_featured = True
+                        featured_jobs_needed -= 1
+                    location = random.choice(LOCATIONS)
+                    employment_type = random.choice(["full_time","part_time","contract","internship"])
+                    experience_level = random.choice(["entry_level","mid_level","senior_level","director","executive"])
+                    remote_option = random.choice(["on_site","remote","hybrid"])
+                    salary = random.randint(40000,150000)
+                    job = Job.objects.create(
+                        employer=emp,
+                        title=title,
+                        company_name=emp.first_name,
+                        description=description,
+                        requirements=requirements,
+                        category=categories[cat_name],
+                        is_featured=is_featured,
+                        employment_type=employment_type,
+                        experience_level=experience_level,
+                        remote_option=remote_option,
+                        salary=salary,
+                        location=location
+                    )
+                    _set_timestamp_if_field_exists(job, now - timedelta(days=random.randint(10,60)))
+                    jobs.append(job)
+                    jobs_created += 1
+                    if jobs_created >= 55:
+                        break
+                if jobs_created >= 55:
+                    break
+            if jobs_created >= 55:
+                break
 
         # -----------------------
         # APPLICATIONS
@@ -240,4 +286,4 @@ class Command(BaseCommand):
                 review = EmployerReview.objects.create(job=app.job, employer=app.job.employer, job_seeker=app.applicant, rating=rating, comment=comment)
                 _set_timestamp_if_field_exists(review, rev_dt)
 
-        self.stdout.write(self.style.SUCCESS("✅ Database populated successfully with 50–60 jobs, multiple categories, and featured jobs!"))
+        self.stdout.write(self.style.SUCCESS("✅ Database populated successfully with 50–60 jobs, meaningful titles, locations, and 10 featured jobs!"))
