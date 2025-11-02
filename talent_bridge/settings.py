@@ -212,8 +212,8 @@ SIMPLE_JWT = {
 # Djoser Configuration
 
 DJOSER = {
-    'EMAIL_FRONTEND_PROTOCOL': config('FRONTEND_PROTOCOL', default='http'),
-    'EMAIL_FRONTEND_DOMAIN': config('FRONTEND_DOMAIN', default='localhost:5173'),
+    'EMAIL_FRONTEND_PROTOCOL': 'http',
+    'EMAIL_FRONTEND_DOMAIN': 'localhost:5173',
     'EMAIL_FRONTEND_SITE_NAME': 'Talent_Bridge',
     'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
     'ACTIVATION_URL': 'activate/{uid}/{token}',
