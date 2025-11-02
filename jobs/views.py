@@ -7,8 +7,11 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from jobs.paginations import DefaultPagination
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from jobs.permissions import IsAdminOrEmployer, IsAdminOnly
+from jobs.permissions import IsAdminOrEmployer
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 
 # Create your views here.
 
