@@ -46,14 +46,12 @@ class JobViewSet(ModelViewSet):
         return super().retrieve(request, *args, **kwargs)
     
     
-    @action(detail=False, methods=["get"], url_path="featured", pagination_class=None, permission_classes=[AllowAny])
-    def featured(self, request):
-        """
-        Return all featured jobs WITHOUT pagination.
-        """
-        featured_jobs = Job.objects.filter(is_featured=True, is_active=True)
-        serializer = self.get_serializer(featured_jobs, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        qs = super().get_queryset()
+        featured = self.request.query_params.get("featured")
+        if featured == "true":
+            return qs.filter(is_featured=True, is_active=True)
+        return qs
 
 
 
