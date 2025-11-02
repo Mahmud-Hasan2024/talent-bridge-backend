@@ -10,10 +10,8 @@ class JobCategorySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'job_count']
 
 
-
 class JobSerializer(serializers.ModelSerializer):
     category = JobCategorySerializer(read_only=True)
-
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=JobCategory.objects.all(),
         source='category',
@@ -23,9 +21,16 @@ class JobSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
         fields = [
-            'id', 'employer', 'title', 'company_name', 'description', 'requirements', 
-            'location', 'category', 'category_id', 'is_featured', 'created_at', 'employment_type', 
-            'experience_level', 'remote_option', 'salary'
-            ]
-        
+            'id', 'employer', 'title', 'company_name', 'description', 'requirements',
+            'location', 'category', 'category_id', 'is_featured', 'is_active',
+            'created_at', 'employment_type', 'experience_level', 'remote_option', 'salary'
+        ]
         read_only_fields = ['id', 'created_at']
+
+    def update(self, instance, validated_data):
+        """Only admins can toggle is_active / is_featured."""
+        request = self.context.get('request')
+        if request and not request.user.groups.filter(name='Admin').exists():
+            validated_data.pop('is_active', None)
+            validated_data.pop('is_featured', None)
+        return super().update(instance, validated_data)
