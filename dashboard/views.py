@@ -56,6 +56,11 @@ class DashboardViewSet(ViewSet):
 
     def employer_dashboard(self, request):
         user = request.user
+        role = getattr(user, "role", "").lower()
+
+        if role != "employer":
+            raise PermissionDenied("Only employers can view this dashboard.")
+
         jobs_qs = Job.objects.filter(employer=user)
 
         jobs_posted = jobs_qs.count()
@@ -78,6 +83,7 @@ class DashboardViewSet(ViewSet):
 
         serializer = EmployerDashboardSerializer(payload)
         return Response(serializer.data)
+
 
     def seeker_dashboard(self, request):
         user = request.user
