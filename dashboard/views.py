@@ -57,28 +57,16 @@ class DashboardViewSet(ViewSet):
 
     def employer_dashboard(self, request):
         user = request.user
-        if user.role != 'employer':
-            raise PermissionDenied("Only employers can view this dashboard.")
-
         jobs_qs = Job.objects.filter(employer=user)
+
         jobs_posted = jobs_qs.count()
         total_applications = Application.objects.filter(job__in=jobs_qs).count()
         featured_jobs = jobs_qs.filter(is_featured=True).count()
 
-        # Annotate applications count and handle null views_count
-        from django.db.models import Count, Value
-        from django.db.models.functions import Coalesce
-
-        top_jobs_qs = jobs_qs.annotate(
-            applications_count=Count('applications', distinct=True),
-            safe_views_count=Coalesce('views_count', Value(0))
-        ).order_by('-safe_views_count')[:5]
-
-        top_jobs = list(top_jobs_qs.values('id', 'title', 'applications_count', 'safe_views_count'))
-
-        # Rename field for serializer
-        for job in top_jobs:
-            job['views_count'] = job.pop('safe_views_count', 0)
+        top_jobs = list(
+            jobs_qs.annotate(applications_count=Count('applications'))
+            .values('id', 'title', 'views_count', 'applications_count')[:5]
+        )
 
         payload = {
             'employer_id': user.id,
@@ -90,6 +78,7 @@ class DashboardViewSet(ViewSet):
 
         serializer = EmployerDashboardSerializer(payload)
         return Response(serializer.data)
+
 
 
 
