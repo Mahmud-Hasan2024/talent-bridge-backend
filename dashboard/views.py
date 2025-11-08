@@ -3,8 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
-from django.db.models import Count
-
+from django.db.models import Count, F
 from jobs.models import Job
 from applications.models import Application
 from accounts.models import User
@@ -55,23 +54,39 @@ class DashboardViewSet(ViewSet):
         return Response(serializer.data)
 
     # ------------------- EMPLOYER DASHBOARD -------------------
+
     def employer_dashboard(self, request):
         user = request.user
         role = getattr(user, "role", "").lower()
+
         if role != "employer":
             raise PermissionDenied("Only employers can view this dashboard.")
 
+        # Get all jobs posted by this employer
         jobs_qs = Job.objects.filter(employer=user)
 
         jobs_posted = jobs_qs.count()
         total_applications = Application.objects.filter(job__in=jobs_qs).count()
         featured_jobs = jobs_qs.filter(is_featured=True).count()
 
-        top_jobs = list(
-            jobs_qs.annotate(applications_count=Count('applications'))
-            .order_by('-views_count')[:5]
-            .values('id', 'title', 'views_count', 'applications_count')
+        # Count applications safely using related_name
+        # Replace 'applications' below with your actual related_name if different
+        top_jobs_qs = jobs_qs.annotate(
+            applications_count=Count('applications', distinct=True)
         )
+
+        # Order safely by views_count (use 0 if null)
+        top_jobs_qs = top_jobs_qs.annotate(
+            safe_views_count=F('views_count')
+        ).order_by('-safe_views_count')[:5]
+
+        top_jobs = list(
+            top_jobs_qs.values('id', 'title', 'safe_views_count', 'applications_count')
+        )
+
+        # Rename for serializer consistency
+        for job in top_jobs:
+            job['views_count'] = job.pop('safe_views_count', 0)
 
         payload = {
             'employer_id': user.id,
@@ -83,6 +98,7 @@ class DashboardViewSet(ViewSet):
 
         serializer = EmployerDashboardSerializer(payload)
         return Response(serializer.data)
+
 
     # ------------------- SEEKER DASHBOARD -------------------
     def seeker_dashboard(self, request):
