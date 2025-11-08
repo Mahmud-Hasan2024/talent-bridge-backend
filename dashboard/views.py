@@ -87,13 +87,21 @@ class DashboardViewSet(ViewSet):
 
         recently_applied = list(
             Application.objects.filter(applicant=user)
+            .select_related('job')
             .order_by('-applied_at')[:5]
-            .values('id', 'job__title', 'applied_at', 'status')
+            .values(
+                'id',
+                'job__id',
+                'job__title',
+                'job__company_name',
+                'job__location',
+                'applied_at',
+                'status'
+            )
         )
 
         recommended_jobs = list(
             Job.objects.exclude(applications__applicant=user)
-            .filter(is_active=True)
             .order_by('-created_at')[:5]
             .values('id', 'title', 'company_name', 'location')
         )
@@ -107,8 +115,10 @@ class DashboardViewSet(ViewSet):
             'recommended_jobs': recommended_jobs
         }
 
-        serializer = SeekerDashboardSerializer(payload)
+        serializer = SeekerDashboardSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
+
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
@@ -121,7 +131,7 @@ class DashboardViewSet(ViewSet):
             jobs_created = Job.objects.filter(created_at__gte=since).count()
             applications_created = Application.objects.filter(applied_at__gte=since).count()
         elif role == "employer":
-            jobs_created = Job.objects.filter(employer=user).count()  # all-time
+            jobs_created = Job.objects.filter(employer=user).count()
             applications_created = Application.objects.filter(job__in=Job.objects.filter(employer=user)).count()
         elif role == "seeker":
             jobs_created = 0
