@@ -1,6 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -8,28 +7,8 @@ from jobs.models import Job, JobCategory
 from jobs.serializers import JobSerializer, JobCategorySerializer
 from jobs.filters import JobFilter
 from jobs.paginations import DefaultPagination
+from jobs.permissions import IsAdminOrOwner
 
-# -----------------------------
-# Permissions
-# -----------------------------
-class IsAdminOrEmployer(BasePermission):
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-        user = request.user
-        return user.is_authenticated and user.role in ['admin', 'employer']
-
-class IsAdminOrOwner(BasePermission):
-    """Admin can do anything. Employer can only modify own jobs."""
-    def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
-
-    def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-        if request.user.role == 'admin':
-            return True
-        return obj.employer == request.user
 
 # -----------------------------
 # Job ViewSet

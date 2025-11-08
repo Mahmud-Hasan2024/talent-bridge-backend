@@ -1,7 +1,6 @@
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Sum
 from jobs.models import Job
 from applications.models import Application
 from accounts.models import User
@@ -11,6 +10,7 @@ from rest_framework.decorators import action
 from django.utils import timezone
 from datetime import timedelta
 from drf_yasg.utils import swagger_auto_schema
+from django.db.models import Count
 
 class DashboardViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
