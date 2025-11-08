@@ -21,21 +21,35 @@ class IsAdminOnly(BasePermission):
     
 
 
-class IsAdminOrOwner(BasePermission):
+from rest_framework.permissions import BasePermission, SAFE_METHODS
+
+class IsAdminOrEmployerOrReadOnly(BasePermission):
     """
-    Allow admin to do anything.
-    Allow employer to modify only their own jobs.
+    - Admins can do anything.
+    - Employers can create/update/delete their own jobs.
+    - Safe methods allowed for everyone authenticated.
     """
 
     def has_permission(self, request, view):
-        # Allow anyone authenticated to create (optional)
-        return request.user and request.user.is_authenticated
+        if request.method in SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+
+        user = request.user
+        return user.is_authenticated and (
+            user.groups.filter(name__in=['Admin', 'Employer']).exists()
+        )
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        if request.user.groups.filter(name="Admin").exists():
+
+        if request.user.groups.filter(name='Admin').exists():
             return True
-        return obj.employer == request.user
+
+        if request.user.groups.filter(name='Employer').exists():
+            return obj.employer == request.user
+
+        return False
+
 
 
