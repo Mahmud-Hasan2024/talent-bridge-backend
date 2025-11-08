@@ -26,7 +26,7 @@ class JobViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [IsAuthenticatedOrReadOnly()]
-        return [IsAuthenticated(), IsAdminOrEmployer()]
+        return [IsAuthenticated(), IsAdminOrOwner()]
 
     def get_queryset(self):
         qs = super().get_queryset()
