@@ -9,6 +9,7 @@ from applications.models import Application
 from accounts.models import User
 from dashboard.serializers import AdminDashboardSerializer, EmployerDashboardSerializer, SeekerDashboardSerializer
 from rest_framework.decorators import action
+from django.db.models import Count
 
 class DashboardViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
@@ -47,17 +48,20 @@ class DashboardViewSet(ViewSet):
         serializer = AdminDashboardSerializer(payload)
         return Response(serializer.data)
 
+
     def employer_dashboard(self, request):
         user = request.user
         jobs_qs = Job.objects.filter(employer=user)
-        
+
         jobs_posted = jobs_qs.count()
         total_applications = Application.objects.filter(job__in=jobs_qs).count()
         featured_jobs = jobs_qs.filter(is_featured=True).count()
 
-        # Top 5 jobs by views
-        top_jobs = list(
-            jobs_qs.order_by('-views_count')[:5]
+        # Top 5 jobs by views, include application counts
+        top_jobs = (
+            jobs_qs
+            .annotate(applications_count=Count('applications'))
+            .order_by('-views_count')[:5]
             .values('id', 'title', 'views_count', 'applications_count')
         )
 
@@ -66,10 +70,11 @@ class DashboardViewSet(ViewSet):
             'jobs_posted': jobs_posted,
             'total_applications': total_applications,
             'featured_jobs': featured_jobs,
-            'top_jobs': top_jobs
+            'top_jobs': list(top_jobs)
         }
         serializer = EmployerDashboardSerializer(payload)
         return Response(serializer.data)
+
 
     def seeker_dashboard(self, request):
         user = request.user

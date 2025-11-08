@@ -18,3 +18,20 @@ class IsAdminOnly(BasePermission):
             return True
         user = request.user
         return user.is_authenticated and user.groups.filter(name='Admin').exists()
+    
+
+class IsAdminOrOwner(BasePermission):
+    """
+    Allow admin to do anything.
+    Allow employer to modify only their own jobs.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Safe methods are always allowed
+        if request.method in SAFE_METHODS:
+            return True
+        # Admin can do anything
+        if request.user.groups.filter(name='Admin').exists():
+            return True
+        # Employer can modify only their jobs
+        return obj.employer == request.user
+
