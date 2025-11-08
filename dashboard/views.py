@@ -3,8 +3,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
-from django.utils import timezone
-from datetime import timedelta
 from django.db.models import Count
 
 from jobs.models import Job
@@ -19,7 +17,8 @@ class DashboardViewSet(ViewSet):
     def list(self, request):
         """Return dashboard summary based on user role"""
         user = request.user
-        role = getattr(user, "role", None)
+        role = getattr(user, "role", "").lower()
+
         if role == "admin":
             return self.admin_dashboard(request)
         elif role == "employer":
@@ -29,6 +28,7 @@ class DashboardViewSet(ViewSet):
         else:
             raise PermissionDenied("Invalid user role for dashboard.")
 
+    # ------------------- ADMIN DASHBOARD -------------------
     def admin_dashboard(self, request):
         total_users = User.objects.count()
         total_jobs = Job.objects.count()
@@ -54,10 +54,10 @@ class DashboardViewSet(ViewSet):
         serializer = AdminDashboardSerializer(payload)
         return Response(serializer.data)
 
+    # ------------------- EMPLOYER DASHBOARD -------------------
     def employer_dashboard(self, request):
         user = request.user
         role = getattr(user, "role", "").lower()
-
         if role != "employer":
             raise PermissionDenied("Only employers can view this dashboard.")
 
@@ -84,7 +84,7 @@ class DashboardViewSet(ViewSet):
         serializer = EmployerDashboardSerializer(payload)
         return Response(serializer.data)
 
-
+    # ------------------- SEEKER DASHBOARD -------------------
     def seeker_dashboard(self, request):
         user = request.user
         applications_count = Application.objects.filter(applicant=user).count()
@@ -125,28 +125,26 @@ class DashboardViewSet(ViewSet):
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
 
-
+    # ------------------- DASHBOARD STATS -------------------
     @action(detail=False, methods=['get'])
     def stats(self, request):
         user = request.user
-        days = int(request.query_params.get('days', '7'))
-        since = timezone.now() - timedelta(days=days)
+        role = getattr(user, "role", "").lower()
 
-        role = getattr(user, "role", None)
         if role == "admin":
-            jobs_created = Job.objects.filter(created_at__gte=since).count()
-            applications_created = Application.objects.filter(applied_at__gte=since).count()
+            jobs_created = Job.objects.count()
+            applications_created = Application.objects.count()
         elif role == "employer":
             jobs_created = Job.objects.filter(employer=user).count()
             applications_created = Application.objects.filter(job__in=Job.objects.filter(employer=user)).count()
         elif role == "seeker":
             jobs_created = 0
-            applications_created = Application.objects.filter(applicant=user, applied_at__gte=since).count()
+            applications_created = Application.objects.filter(applicant=user).count()
         else:
             raise PermissionDenied("Invalid user role for dashboard stats.")
 
         return Response({
-            'days': days,
+            'days': "all-time",
             'jobs_created': jobs_created,
             'applications_created': applications_created
         })
