@@ -12,6 +12,7 @@ from applications.models import Application
 from accounts.models import User
 from dashboard.serializers import AdminDashboardSerializer, EmployerDashboardSerializer, SeekerDashboardSerializer
 
+
 class DashboardViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -39,7 +40,7 @@ class DashboardViewSet(ViewSet):
         )
         recent_applications = list(
             Application.objects.order_by('-applied_at')[:5]
-            .values('id', 'job_id', 'applicant_id', 'applied_at', 'status')
+            .values('id', 'job__title', 'applicant_id', 'applied_at', 'status')
         )
 
         payload = {
@@ -50,8 +51,7 @@ class DashboardViewSet(ViewSet):
             'recent_applications': recent_applications
         }
 
-        serializer = AdminDashboardSerializer(data=payload)
-        serializer.is_valid(raise_exception=True)
+        serializer = AdminDashboardSerializer(payload)
         return Response(serializer.data)
 
     def employer_dashboard(self, request):
@@ -76,8 +76,7 @@ class DashboardViewSet(ViewSet):
             'top_jobs': top_jobs
         }
 
-        serializer = EmployerDashboardSerializer(data=payload)
-        serializer.is_valid(raise_exception=True)
+        serializer = EmployerDashboardSerializer(payload)
         return Response(serializer.data)
 
     def seeker_dashboard(self, request):
@@ -89,7 +88,7 @@ class DashboardViewSet(ViewSet):
         recently_applied = list(
             Application.objects.filter(applicant=user)
             .order_by('-applied_at')[:5]
-            .values('id', 'job_id', 'applied_at', 'status')
+            .values('id', 'job__title', 'applied_at', 'status')
         )
 
         recommended_jobs = list(
@@ -108,8 +107,7 @@ class DashboardViewSet(ViewSet):
             'recommended_jobs': recommended_jobs
         }
 
-        serializer = SeekerDashboardSerializer(data=payload)
-        serializer.is_valid(raise_exception=True)
+        serializer = SeekerDashboardSerializer(payload)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
