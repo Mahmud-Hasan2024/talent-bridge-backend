@@ -28,29 +28,45 @@ class ApplicationViewSet(ModelViewSet):
             return Application.objects.none()
 
         user = self.request.user
+        queryset = Application.objects.select_related('applicant', 'job', 'job__employer')
+
         # Safety: if anonymous return empty queryset
         if not user.is_authenticated:
             return Application.objects.none()
 
+        # 1. Base Queryset Filtered by Role (Security Layer)
+        
+        # Admin sees everything (no base filter applied)
+        if getattr(user, "role", None) == "admin":
+            pass # Keep the full queryset
+            
         # Job seekers see only their own applications
-        if getattr(user, "role", None) == "seeker":
-            return Application.objects.filter(applicant=user)
+        elif getattr(user, "role", None) == "seeker":
+            queryset = queryset.filter(applicant=user)
 
         # Employers see applications to their own jobs
-        if getattr(user, "role", None) == "employer":
-            return Application.objects.filter(job__employer=user)
+        elif getattr(user, "role", None) == "employer":
+            # This is the required filter for employers
+            queryset = queryset.filter(job__employer=user)
+        
+        else:
+            # Catch-all for unknown roles
+            return Application.objects.none()
 
-        # Admin sees everything
-        if getattr(user, "role", None) == "admin":
-            return Application.objects.all()
+        
+        job_employer_id = self.request.query_params.get('job__employer')
+        if job_employer_id and getattr(user, "role", None) in ["admin", "employer"]:
+            if getattr(user, "role", None) == "admin" or str(user.id) == job_employer_id:
+                queryset = queryset.filter(job__employer_id=job_employer_id)
+        
+        applicant_id = self.request.query_params.get('applicant')
+        if applicant_id and getattr(user, "role", None) in ["admin", "seeker"]:
+            if getattr(user, "role", None) == "admin" or str(user.id) == applicant_id:
+                queryset = queryset.filter(applicant_id=applicant_id)
 
-        return Application.objects.none()
+        return queryset
 
-    @swagger_auto_schema(
-        operation_summary="Create application for a job",
-        operation_description="Job seekers can apply to a job. `job_pk` is expected from the nested route.",
-        responses={201: ApplicationSerializer()}
-    )
+        
     def perform_create(self, serializer):
         # In normal usage job_pk should come from nested URL
         job_id = self.kwargs.get("job_pk")
