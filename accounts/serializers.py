@@ -52,3 +52,10 @@ class UserSerializer(BaseUserSerializer):
         # Keep group sync logic
         instance.sync_group_with_role()
         return instance
+    
+    
+class SimpleUserDetailSerializer(serializers.ModelSerializer):
+    """Serializer used for nesting inside ApplicationSerializer."""
+    class Meta:
+        model = User
+        fields = ('id', 'first_name', 'last_name', 'email')
