@@ -9,6 +9,7 @@ router = routers.DefaultRouter()
 router.register('jobs', JobViewSet, basename='jobs')
 router.register('job-categories', JobCategoryViewSet, basename='job-categories')
 router.register('dashboard', DashboardViewSet, basename='dashboard')
+router.register('applications', ApplicationViewSet, basename='applications')
 
 # Nested routers for jobs
 jobs_router = routers.NestedDefaultRouter(router, 'jobs', lookup='job')
