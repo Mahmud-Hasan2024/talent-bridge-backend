@@ -56,24 +56,35 @@ class DashboardViewSet(ViewSet):
 
     def employer_dashboard(self, request):
             user = request.user
-            jobs_qs = Job.objects.filter(employer=user)
-            jobs_posted = jobs_qs.count()
+            
+            # Define the time threshold (7 days ago)
+            seven_days_ago = timezone.now() - timedelta(days=7)
+            
+            # 1. Total Jobs Posted (All Time) - This should NOT be filtered
+            jobs_qs_all_time = Job.objects.filter(employer=user)
+            jobs_posted = jobs_qs_all_time.count()
+
+            # 2. Total Applications (All Time) - This should NOT be filtered
             total_applications = Application.objects.filter(job__employer=user).count()
-            featured_jobs = jobs_qs.filter(is_featured=True).count()
+            
+            # 3. Featured Jobs (All Time) - This should NOT be filtered
+            featured_jobs = jobs_qs_all_time.filter(is_featured=True).count()
+            
+            # 4. Filtered Job QuerySet (For recent and top-performing lists)
 
             top_jobs = list(
-                jobs_qs.annotate(live_applications_count=Count('applications'))
+                jobs_qs_all_time.annotate(live_applications_count=Count('applications'))
                 .order_by('-views_count') 
                 [:5]
                 .values('id', 'title', 'views_count', 'live_applications_count')
             )
-
+            
             payload = {
                 'employer_id': user.id,
-                'jobs_posted': jobs_posted,
+                'jobs_posted': jobs_posted, # Now uses ALL TIME count
                 'total_applications': total_applications,
                 'featured_jobs': featured_jobs,
-                'top_jobs': top_jobs
+                'top_jobs': top_jobs # Uses ALL TIME top performers
             }
             serializer = EmployerDashboardSerializer(payload)
             return Response(serializer.data)
