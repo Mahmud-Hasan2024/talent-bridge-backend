@@ -55,28 +55,28 @@ class DashboardViewSet(ViewSet):
         return Response(serializer.data)
 
     def employer_dashboard(self, request):
-        user = request.user
-        jobs_qs = Job.objects.filter(employer=user)
-        jobs_posted = jobs_qs.count()
-        total_applications = Application.objects.filter(job__in=jobs_qs).count()
-        featured_jobs = jobs_qs.filter(is_featured=True).count()
+            user = request.user
+            jobs_qs = Job.objects.filter(employer=user)
+            jobs_posted = jobs_qs.count()
+            total_applications = Application.objects.filter(job__employer=user).count()
+            featured_jobs = jobs_qs.filter(is_featured=True).count()
 
-        # Count applications for each job
-        top_jobs = list(
-            jobs_qs.annotate(applications_count=Count('applications'))
-            .order_by('-views_count')[:5]
-            .values('id', 'title', 'views_count', 'applications_count')
-        )
+            top_jobs = list(
+                jobs_qs.annotate(live_applications_count=Count('applications'))
+                .order_by('-views_count') 
+                [:5]
+                .values('id', 'title', 'views_count', 'live_applications_count')
+            )
 
-        payload = {
-            'employer_id': user.id,
-            'jobs_posted': jobs_posted,
-            'total_applications': total_applications,
-            'featured_jobs': featured_jobs,
-            'top_jobs': top_jobs
-        }
-        serializer = EmployerDashboardSerializer(payload)
-        return Response(serializer.data)
+            payload = {
+                'employer_id': user.id,
+                'jobs_posted': jobs_posted,
+                'total_applications': total_applications,
+                'featured_jobs': featured_jobs,
+                'top_jobs': top_jobs
+            }
+            serializer = EmployerDashboardSerializer(payload)
+            return Response(serializer.data)
 
     def seeker_dashboard(self, request):
         user = request.user
