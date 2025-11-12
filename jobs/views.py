@@ -22,6 +22,14 @@ class JobViewSet(ModelViewSet):
     ordering_fields = ["created_at", "company_name", "title"]
     pagination_class = DefaultPagination
 
+    def paginate_queryset(self, queryset):
+        # Check if the 'no_pagination' query parameter is present in the request
+        if 'no_pagination' in self.request.query_params:
+            return None # Setting to None disables pagination for this request
+        
+        # Otherwise, use the default pagination logic
+        return super().paginate_queryset(queryset)
+
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [IsAuthenticatedOrReadOnly()]
