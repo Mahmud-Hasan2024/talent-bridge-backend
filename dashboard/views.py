@@ -21,7 +21,10 @@ class DashboardViewSet(ViewSet):
     )
     def list(self, request):
         user = request.user
-        role = getattr(user, "role", None)
+        
+        # Get the role and convert it to lowercase for case-insensitive check
+
+        role = getattr(user, "role", "").lower() 
 
         if role == "admin":
             return self.admin_dashboard(request)
@@ -30,6 +33,7 @@ class DashboardViewSet(ViewSet):
         elif role == "seeker":
             return self.seeker_dashboard(request)
         else:
+            # If role is None or not recognized after lowercasing
             raise PermissionDenied("Invalid user role for dashboard.")
 
     def admin_dashboard(self, request):
@@ -55,44 +59,43 @@ class DashboardViewSet(ViewSet):
         return Response(serializer.data)
 
     def employer_dashboard(self, request):
-            user = request.user
-            
-            # Define the time threshold (7 days ago)
-            seven_days_ago = timezone.now() - timedelta(days=7)
-            
-            # 1. Total Jobs Posted (All Time) - This should NOT be filtered
-            jobs_qs_all_time = Job.objects.filter(employer=user)
-            jobs_posted = jobs_qs_all_time.count()
+        user = request.user       
+        
+        # 1. Total Jobs Posted (All Time)
+        jobs_qs_all_time = Job.objects.filter(employer=user)
+        jobs_posted = jobs_qs_all_time.count()
 
-            # 2. Total Applications (All Time) - This should NOT be filtered
-            total_applications = Application.objects.filter(job__employer=user).count()
-            
-            # 3. Featured Jobs (All Time) - This should NOT be filtered
-            featured_jobs = jobs_qs_all_time.filter(is_featured=True).count()
-            
-            # 4. Filtered Job QuerySet (For recent and top-performing lists)
+        # 2. Total Applications (All Time)
+        total_applications = Application.objects.filter(job__employer=user).count()
+        
+        # 3. Featured Jobs (All Time)
+        featured_jobs = jobs_qs_all_time.filter(is_featured=True).count()
+        
+        # 4. Filtered Job QuerySet (For recent and top-performing lists)
 
-            top_jobs = list(
-                jobs_qs_all_time.annotate(live_applications_count=Count('applications'))
-                .order_by('-views_count') 
-                [:5]
-                .values('id', 'title', 'views_count', 'live_applications_count')
-            )
-            
-            payload = {
-                'employer_id': user.id,
-                'jobs_posted': jobs_posted, # Now uses ALL TIME count
-                'total_applications': total_applications,
-                'featured_jobs': featured_jobs,
-                'top_jobs': top_jobs # Uses ALL TIME top performers
-            }
-            serializer = EmployerDashboardSerializer(payload)
-            return Response(serializer.data)
+        top_jobs = list(
+            jobs_qs_all_time.annotate(live_applications_count=Count('applications'))
+            .order_by('-views_count') 
+            .order_by('-live_applications_count') # Added application count as secondary sort
+            [:5]
+            .values('id', 'title', 'views_count', 'live_applications_count')
+        )
+        
+        payload = {
+            'employer_id': user.id,
+            'jobs_posted': jobs_posted,
+            'total_applications': total_applications,
+            'featured_jobs': featured_jobs,
+            'top_jobs': top_jobs 
+        }
+        serializer = EmployerDashboardSerializer(payload)
+        return Response(serializer.data)
 
     def seeker_dashboard(self, request):
         user = request.user
         applications_count = Application.objects.filter(applicant=user).count()
-        interviews = Application.objects.filter(applicant=user, status='interviewed').count()
+        
+        interviews = Application.objects.filter(applicant=user, status='interviewed').count() 
         offers = Application.objects.filter(applicant=user, status='offered').count()
 
         recently_applied = list(
@@ -126,6 +129,20 @@ class DashboardViewSet(ViewSet):
     def stats(self, request):
         days = int(request.query_params.get('days', '7'))
         since = timezone.now() - timedelta(days=days)
-        jobs_created = Job.objects.filter(created_at__gte=since).count()
-        applications_created = Application.objects.filter(applied_at__gte=since).count()
+        
+        user = request.user
+        role = getattr(user, "role", "").lower()
+        
+        if role == "admin":
+            jobs_created = Job.objects.filter(created_at__gte=since).count()
+            applications_created = Application.objects.filter(applied_at__gte=since).count()
+        elif role == "employer":
+            jobs_created = Job.objects.filter(employer=user, created_at__gte=since).count()
+            applications_created = Application.objects.filter(job__employer=user, applied_at__gte=since).count()
+        elif role == "seeker":
+            jobs_created = 0
+            applications_created = Application.objects.filter(applicant=user, applied_at__gte=since).count()
+        else:
+            return Response({"detail": "Role not recognized."}, status=403)
+            
         return Response({'days': days, 'jobs_created': jobs_created, 'applications_created': applications_created})

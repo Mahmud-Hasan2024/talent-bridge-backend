@@ -18,7 +18,7 @@ class AdminDashboardSerializer(serializers.Serializer):
     total_users = serializers.IntegerField()
     total_jobs = serializers.IntegerField()
     total_applications = serializers.IntegerField()
-    # total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
+    # total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2, required=False) # Marked as False since not used in view
     recent_jobs = serializers.ListField(child=serializers.DictField(), required=False)
     recent_applications = serializers.ListField(child=serializers.DictField(), required=False)
 
@@ -28,7 +28,7 @@ class EmployerDashboardSerializer(serializers.Serializer):
     jobs_posted = serializers.IntegerField()
     total_applications = serializers.IntegerField()
     featured_jobs = serializers.IntegerField()
-    # earnings = serializers.DecimalField(max_digits=12, decimal_places=2)
+    # earnings = serializers.DecimalField(max_digits=12, decimal_places=2, required=False) # Marked as False since not used in view
     top_jobs = TopJobSerializer(many=True, required=False)
 
 
