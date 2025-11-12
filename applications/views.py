@@ -34,18 +34,21 @@ class ApplicationViewSet(ModelViewSet):
         if not user.is_authenticated:
             return Application.objects.none()
 
+        # 💡 FIX 1: Get user role safely and convert to lowercase for case-insensitive check
+        user_role = getattr(user, "role", "").lower()
+
         # 1. Base Queryset Filtered by Role (Security Layer)
         
         # Admin sees everything (no base filter applied)
-        if getattr(user, "role", None) == "admin":
+        if user_role == "admin":
             pass # Keep the full queryset
             
         # Job seekers see only their own applications
-        elif getattr(user, "role", None) == "seeker":
+        elif user_role == "seeker":
             queryset = queryset.filter(applicant=user)
 
         # Employers see applications to their own jobs
-        elif getattr(user, "role", None) == "employer":
+        elif user_role == "employer":
             # This is the required filter for employers
             queryset = queryset.filter(job__employer=user)
         
@@ -55,13 +58,15 @@ class ApplicationViewSet(ModelViewSet):
 
         
         job_employer_id = self.request.query_params.get('job__employer')
-        if job_employer_id and getattr(user, "role", None) in ["admin", "employer"]:
-            if getattr(user, "role", None) == "admin" or str(user.id) == job_employer_id:
+        # 💡 FIX 2: Check query param filtering using the corrected user_role variable
+        if job_employer_id and user_role in ["admin", "employer"]:
+            if user_role == "admin" or str(user.id) == job_employer_id:
                 queryset = queryset.filter(job__employer_id=job_employer_id)
         
         applicant_id = self.request.query_params.get('applicant')
-        if applicant_id and getattr(user, "role", None) in ["admin", "seeker"]:
-            if getattr(user, "role", None) == "admin" or str(user.id) == applicant_id:
+        # 💡 FIX 3: Check query param filtering using the corrected user_role variable
+        if applicant_id and user_role in ["admin", "seeker"]:
+            if user_role == "admin" or str(user.id) == applicant_id:
                 queryset = queryset.filter(applicant_id=applicant_id)
 
         return queryset
@@ -71,8 +76,11 @@ class ApplicationViewSet(ModelViewSet):
         # In normal usage job_pk should come from nested URL
         job_id = self.kwargs.get("job_pk")
         user = self.request.user
+        
+        # 💡 FIX 4: Use case-insensitive role check
+        user_role = getattr(user, "role", "").lower()
 
-        if not user.is_authenticated or getattr(user, "role", None) != "seeker":
+        if not user.is_authenticated or user_role != "seeker":
             raise PermissionDenied("Only job seekers can apply for jobs.")
 
         if not job_id:
@@ -89,10 +97,13 @@ class ApplicationViewSet(ModelViewSet):
     def perform_update(self, serializer):
         user = self.request.user
         application = self.get_object()
+        
+        # 💡 FIX 5: Use case-insensitive role check
+        user_role = getattr(user, "role", "").lower()
 
-        if getattr(user, "role", None) == "employer" and application.job.employer != user:
+        if user_role == "employer" and application.job.employer != user:
             raise PermissionDenied("You can only update applications for your own jobs.")
-        elif getattr(user, "role", None) not in ["employer", "admin"]:
+        elif user_role not in ["employer", "admin"]:
             raise PermissionDenied("Only employers or admins can update application status.")
         serializer.save()
 
@@ -104,8 +115,11 @@ class ApplicationViewSet(ModelViewSet):
     def withdraw(self, request, pk=None, job_pk=None):
         user = request.user
         application = self.get_object()
+        
+        # 💡 FIX 6: Use case-insensitive role check
+        user_role = getattr(user, "role", "").lower()
 
-        if not user.is_authenticated or getattr(user, "role", None) != "seeker" or application.applicant != user:
+        if not user.is_authenticated or user_role != "seeker" or application.applicant != user:
             return Response({"detail": "You can only withdraw your own applications."}, status=403)
 
         if application.status in ["accepted", "rejected", "withdrawn"]:
