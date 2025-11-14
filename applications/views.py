@@ -113,6 +113,21 @@ class ApplicationViewSet(ModelViewSet):
         ).exists()
 
         return Response({"can_review": can_review})
+    
+
+    @swagger_auto_schema(
+        operation_summary="Get possible application status choices",
+        operation_description="Returns the defined list of status choices and their display names.",
+    )
+    @action(detail=False, methods=["get"], url_path="status-choices")
+    def status_choices(self, request):
+        """Returns the choices defined in the Application model."""
+        choices = [
+            {"value": value, "label": display_name}
+            for value, display_name in Application.STATUS_CHOICES
+        ]
+        return Response(choices)
+
 
     @swagger_auto_schema(
         operation_summary="Withdraw an application",
