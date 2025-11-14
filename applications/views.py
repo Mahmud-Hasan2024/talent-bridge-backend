@@ -92,6 +92,28 @@ class ApplicationViewSet(ModelViewSet):
             raise PermissionDenied("Only employers or admins can update application status.")
         serializer.save()
 
+
+    @swagger_auto_schema(
+        operation_summary="Check if user can review this job",
+        operation_description="Returns true if the authenticated Job Seeker has an 'accepted' application for the given job.",
+    )
+    @action(detail=False, methods=["get"], url_path="can-review/(?P<job_id>[^/.]+)")
+    def can_review(self, request, job_id=None):
+        user = request.user
+        
+        # 1. Must be authenticated and a job seeker
+        if not user.is_authenticated or getattr(user, "role", "").lower() != "seeker":
+            return Response({"can_review": False})
+
+        # 2. Check for accepted application
+        can_review = Application.objects.filter(
+            job_id=job_id,
+            applicant=user,
+            status=Application.ACCEPTED
+        ).exists()
+
+        return Response({"can_review": can_review})
+
     @swagger_auto_schema(
         operation_summary="Withdraw an application",
         operation_description="Job seeker withdraws their own application (if allowed)."
