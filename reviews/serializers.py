@@ -1,7 +1,11 @@
 from rest_framework import serializers
 from reviews.models import EmployerReview
+from accounts.serializers import SimpleUserDetailSerializer
 
 class EmployerReviewSerializer(serializers.ModelSerializer):
+    job_seeker = SimpleUserDetailSerializer(read_only=True)
+    employer = SimpleUserDetailSerializer(read_only=True)
+
     class Meta:
         model = EmployerReview
         fields = [

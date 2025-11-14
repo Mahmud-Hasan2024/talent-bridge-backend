@@ -45,6 +45,21 @@ class EmployerReviewViewSet(ModelViewSet):
 
         serializer.save(job=job, employer=job.employer, job_seeker=self.request.user)
 
+    def perform_update(self, serializer):
+        review = self.get_object()
+        # Only the job seeker who wrote the review can update it.
+        if review.job_seeker != self.request.user:
+            raise PermissionDenied("You can only edit your own review.")
+            
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        # Only the job seeker who wrote the review can delete it.
+        if instance.job_seeker != self.request.user:
+            raise PermissionDenied("You can only delete your own review.")
+            
+        instance.delete()
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         # don't error during swagger schema generation
