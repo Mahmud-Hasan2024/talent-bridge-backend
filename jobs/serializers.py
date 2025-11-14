@@ -39,7 +39,6 @@ class JobSerializer(serializers.ModelSerializer):
 
 class SimpleJobDetailSerializer(serializers.ModelSerializer):
     """Serializer used for nesting inside ApplicationSerializer."""
-    # Ensure you include 'company_name' since you rely on it for the Employer column
     class Meta:
         model = Job
         fields = ('id', 'title', 'company_name')

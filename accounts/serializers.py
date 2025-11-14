@@ -22,7 +22,6 @@ class UserCreateSerializer(BaseUserCreateSerializer):
     def update(self, instance, validated_data):
         request = self.context.get('request')
 
-        # Safely block non-admins from changing role
         if 'role' in validated_data and not request.user.has_perm('accounts.is_admin_only'):
             validated_data.pop('role')
 
@@ -43,13 +42,11 @@ class UserSerializer(BaseUserSerializer):
         """Allow only admins (with custom permission) to change role."""
         request = self.context.get('request')
 
-        # Prevent non-admins from changing role
         if 'role' in validated_data and not request.user.has_perm('accounts.is_admin_only'):
             validated_data.pop('role')
 
         instance = super().update(instance, validated_data)
 
-        # Keep group sync logic
         instance.sync_group_with_role()
         return instance
     
