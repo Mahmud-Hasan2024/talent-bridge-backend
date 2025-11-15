@@ -8,10 +8,6 @@ class ApplicationSerializer(serializers.ModelSerializer):
     job = SimpleJobDetailSerializer(read_only=True)
     job_employer_name = serializers.CharField(source='job.company_name', read_only=True) 
     
-    resume = serializers.FileField(required=True)
-    cover_letter = serializers.FileField(required=False, allow_null=True)
-    portfolio_link = serializers.URLField(required=False, allow_null=True)
-    
     class Meta:
         model = Application
         fields = [ 
