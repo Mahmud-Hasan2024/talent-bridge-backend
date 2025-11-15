@@ -95,6 +95,7 @@ WSGI_APPLICATION = 'talent_bridge.wsgi.app'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://talent-bridge-frontend-psi.vercel.app",
 ]
 
 
@@ -212,8 +213,8 @@ SIMPLE_JWT = {
 # Djoser Configuration
 
 DJOSER = {
-    'EMAIL_FRONTEND_PROTOCOL': 'http',
-    'EMAIL_FRONTEND_DOMAIN': 'localhost:5173',
+    'EMAIL_FRONTEND_PROTOCOL': 'https',
+    'EMAIL_FRONTEND_DOMAIN': 'talent-bridge-frontend-psi.vercel.app',
     'EMAIL_FRONTEND_SITE_NAME': 'Talent_Bridge',
     'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
     'ACTIVATION_URL': 'activate/{uid}/{token}',
@@ -247,7 +248,7 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 BACKEND_URL = config("BACKEND_URL")
-# FRONTEND_URL = config("FRONTEND_URL")
+FRONTEND_URL = config("FRONTEND_URL")
 
 # SSLCOMMERZ Settings
 SSL_STORE_ID = config('SSL_STORE_ID')
