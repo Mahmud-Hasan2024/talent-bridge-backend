@@ -175,12 +175,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Cloudinary configuration
 
-cloudinary.config( 
-    cloud_name = config('cloud_name'), 
-    api_key = config('api_key'), 
-    api_secret = config('api_secret'),
-    secure=True
-)
+# cloudinary.config( 
+#     cloud_name = config('cloud_name'), 
+#     api_key = config('api_key'), 
+#     api_secret = config('api_secret'),
+#     secure=True
+# )
 
 # Media storage for cloudinary
 
