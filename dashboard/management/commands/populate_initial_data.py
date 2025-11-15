@@ -6,7 +6,7 @@ from django.utils import timezone
 from accounts.models import User
 from jobs.models import JobCategory, Job
 from applications.models import Application
-from reviews.models import EmployerReview
+from reviews.models import EmployerReview 
 
 from datetime import timedelta
 import random
@@ -83,7 +83,7 @@ def _set_timestamp_if_field_exists(obj, dt):
     """Set timestamp fields like created_at, posted_at, applied_at if they exist."""
     timestamp_fields = [
         "created_at", "created_on", "posted_at", "posted_on",
-        "published_at", "date_posted", "applied_at", "applied_on"
+        "published_at", "date_posted", "applied_at", "applied_on", "updated_at" 
     ]
     changed = False
     for fname in timestamp_fields:
@@ -250,7 +250,7 @@ class Command(BaseCommand):
                 break
 
         # -----------------------
-        # APPLICATIONS
+        # APPLICATIONS (MODIFIED FOR TEXT/CHAR FIELDS)
         # -----------------------
         self.stdout.write("✉️ Creating applications...")
         statuses = [Application.PENDING, Application.REVIEWED, Application.INTERVIEWED, Application.OFFERED, Application.ACCEPTED]
@@ -266,10 +266,27 @@ class Command(BaseCommand):
                 applied_dt = job_posted + timedelta(days=random.randint(3,20))
                 if applied_dt > now:
                     applied_dt = now - timedelta(hours=random.randint(1,48))
-                resume_path = f"resumes/{seeker_obj.first_name.lower()}_{seeker_obj.last_name.lower()}.pdf"
-                app = Application.objects.create(job=job, applicant=seeker_obj, resume=resume_path, status=status)
+                
+                # Fields now use Text/Char, so storing mock URL/Text:
+                mock_resume_text = f"User {seeker_obj.email}'s resume content, highlighting Python and Django skills." * 5 
+                mock_cover_letter_text = f"Dedicated cover letter for the {job.title} position at {job.company_name}." * 3
+                mock_portfolio_link = f"https://{seeker_obj.first_name.lower()}portfolio.com" if (i+j)%2 == 0 else ""
+
+                app = Application.objects.create(
+                    job=job, 
+                    applicant=seeker_obj, 
+                    resume=mock_resume_text, 
+                    cover_letter=mock_cover_letter_text,
+                    portfolio_link=mock_portfolio_link,
+                    status=status
+                )
+                
                 _set_timestamp_if_field_exists(app, applied_dt)
                 applications.append(app)
+                # Manually update job applications_count 
+                job.applications_count = Application.objects.filter(job=job).count()
+                job.save()
+
 
         # -----------------------
         # EMPLOYER REVIEWS
@@ -281,9 +298,18 @@ class Command(BaseCommand):
                 rev_dt = app_dt + timedelta(days=random.randint(1,7))
                 if rev_dt > now:
                     rev_dt = now - timedelta(hours=random.randint(1,48))
-                rating = 5 if len(app.applicant.first_name)%2 == 0 else 4
-                comment = f"{app.applicant.first_name} delivered work for '{app.job.title}'. Recommended."
-                review = EmployerReview.objects.create(job=app.job, employer=app.job.employer, job_seeker=app.applicant, rating=rating, comment=comment)
-                _set_timestamp_if_field_exists(review, rev_dt)
+                rating = random.choice([4, 5]) 
+                comment = f"Excellent candidate. {app.applicant.first_name} was hired for '{app.job.title}' and performed well."
+                
+                # Check for existing review to maintain UniqueConstraint
+                if not EmployerReview.objects.filter(employer=app.job.employer, job_seeker=app.applicant, job=app.job).exists():
+                    review = EmployerReview.objects.create(
+                        job=app.job, 
+                        employer=app.job.employer, 
+                        job_seeker=app.applicant, 
+                        rating=rating, 
+                        comment=comment
+                    )
+                    _set_timestamp_if_field_exists(review, rev_dt)
 
-        self.stdout.write(self.style.SUCCESS("✅ Database populated successfully with 50–60 jobs, meaningful titles, locations, and 10 featured jobs!"))
+        self.stdout.write(self.style.SUCCESS("✅ Database populated successfully with 50–60 jobs and associated data!"))
