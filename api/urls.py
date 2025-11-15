@@ -1,9 +1,11 @@
 from django.urls import path, include
-from jobs.views import JobViewSet, JobCategoryViewSet
+from jobs.views import (JobViewSet, JobCategoryViewSet, feature_payment_success,
+                        feature_payment_fail, feature_payment_cancel)
 from reviews.views import EmployerReviewViewSet
 from applications.views import ApplicationViewSet
 from dashboard.views import DashboardViewSet
 from rest_framework_nested import routers
+
 
 router = routers.DefaultRouter()
 router.register('jobs', JobViewSet, basename='jobs')
@@ -21,4 +23,8 @@ urlpatterns = [
     path('', include(jobs_router.urls)),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
+
+    path("jobs/payment/success/", feature_payment_success, name="job-payment-success"),
+    path("jobs/payment/fail/", feature_payment_fail, name="job-payment-fail"),
+    path("jobs/payment/cancel/", feature_payment_cancel, name="job-payment-cancel"),
 ]
