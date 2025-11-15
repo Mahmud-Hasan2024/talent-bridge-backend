@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'djoser',
     'drf_yasg',
+    'cloudinary_storage', 
+    'cloudinary',
 
     # Local apps
     'accounts',
