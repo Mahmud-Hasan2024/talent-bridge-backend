@@ -9,7 +9,7 @@ It includes **JWT authentication**, **role-based dashboards**, **Swagger API doc
 
 ## 🚀 Live Demo
 
-- 🔗 **Production:** [https://talent-bridge.vercel.app/](https://talent-bridge.vercel.app/)
+- 🔗 **Production:** [https://talent-bridge-frontend-psi.vercel.app/](https://talent-bridge-frontend-psi.vercel.app/)
 
 - 🌍 **Base API:** [https://talent-bridge-api.vercel.app/api/v1/](https://talent-bridge-api.vercel.app/api/v1/)
 - 📘 **Swagger Docs:** [https://talent-bridge-api.vercel.app/swagger/](https://talent-bridge-api.vercel.app/swagger/)
