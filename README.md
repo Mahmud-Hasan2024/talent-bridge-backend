@@ -16,6 +16,18 @@ It includes **JWT authentication**, **role-based dashboards**, **Swagger API doc
 
 ---
 
+## 👤 Demo Accounts
+
+| Role       | Email                      | Password   |
+| ---------- | -------------------------- | ---------- |
+| Admin      | `admin1@dhakajobs.local`   | `kgb12345` |
+| Employer   | `hello@sylhetdata.com`     | `kgb12345` |
+| Job Seeker | `seeker15@jobportal.local` | `kgb12345` |
+
+Use these credentials to log in and explore the API in Swagger or Postman.
+
+---
+
 ## 🧠 Features
 
 - 👤 **Custom User Roles:** Admin, Employer, and Job Seeker
