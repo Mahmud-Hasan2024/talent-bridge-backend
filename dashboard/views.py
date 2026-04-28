@@ -106,7 +106,7 @@ class DashboardViewSet(ViewSet):
         recommended_jobs = list(
             Job.objects.exclude(applications__applicant=user)
             .filter(is_active=True)
-            .order_by('-created_at')[:5]
+            .order_by('-created_at')[:6]
             .values('id', 'title', 'company_name', 'location')
         )
 
