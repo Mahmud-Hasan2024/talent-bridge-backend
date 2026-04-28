@@ -42,7 +42,7 @@ class DashboardViewSet(ViewSet):
         total_applications = Application.objects.count()
 
         recent_jobs = list(
-            Job.objects.order_by('-created_at')[:5].values('id', 'title', 'company_name', 'created_at')
+            Job.objects.order_by('-created_at')[:6].values('id', 'title', 'company_name', 'created_at')
         )
         recent_applications = list(
             Application.objects.order_by('-applied_at')[:5].values('id', 'job_id', 'applicant_id', 'applied_at', 'status')
