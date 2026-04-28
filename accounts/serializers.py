@@ -34,7 +34,7 @@ class UserSerializer(BaseUserSerializer):
         model = User
         fields = (
             'id', 'email', 'first_name', 'last_name',
-            'address', 'phone_number', 'role'
+            'address', 'phone_number', 'role', 'is_active',
         )
         read_only_fields = ('email',)
 
