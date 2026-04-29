@@ -53,14 +53,6 @@ class UserSerializer(BaseUserSerializer):
     
 class SimpleUserDetailSerializer(serializers.ModelSerializer):
     """Serializer used for nesting inside ApplicationSerializer."""
-    full_name = serializers.SerializerMethodField()
-
     class Meta:
         model = User
-        fields = ('id', 'full_name', 'first_name', 'last_name', 'email')
-
-    def get_full_name(self, obj):
-        # This mimics your React logic perfectly on the backend
-        if obj.first_name or obj.last_name:
-            return f"{obj.first_name} {obj.last_name}".strip()
-        return obj.username or "System User"
+        fields = ('id', 'first_name', 'last_name', 'email')
