@@ -12,6 +12,9 @@ from datetime import timedelta
 from drf_yasg.utils import swagger_auto_schema
 from django.db.models import Count
 
+# Create your views here.
+
+
 class DashboardViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
