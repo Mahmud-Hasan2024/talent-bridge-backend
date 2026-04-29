@@ -34,28 +34,25 @@ class JobViewSet(ModelViewSet):
     filterset_class = JobFilter
     search_fields = ["title", "company_name", "description", "location"]
     pagination_class = DefaultPagination
+    
+    ordering_fields = ['created_at', 'title', 'salary']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         user = self.request.user
         
-        # 💡 OPTIMIZATION: Eager Loading
-        # We join 'category' and 'employer' here. 
-        # Since your model HAS 'employer = models.ForeignKey...', this is now safe.
-        queryset = Job.objects.select_related("category", "employer").all().order_by("-created_at")
+        queryset = Job.objects.select_related("category", "employer").all()
 
         if not user.is_authenticated:
             return queryset
 
         user_role = getattr(user, 'role', '').lower()
         
-        # Admins see everything
         if user_role == 'admin':
             return queryset
         
-        # Employer filtering logic
         employer_param = self.request.query_params.get('employer')
         if user_role == 'employer' and employer_param:
-            # Only allow filtering if the ID matches the logged-in user
             if str(user.id) == employer_param:
                 return queryset.filter(employer=user)
             return queryset.none()
@@ -102,8 +99,8 @@ class JobViewSet(ModelViewSet):
         response = sslcz.createSession(post_body)
         return Response({"payment_url": response['GatewayPageURL']}) if response.get("status") == 'SUCCESS' else Response(status=400)
 
+
 class JobCategoryViewSet(ModelViewSet):
-    # 💡 OPTIMIZATION: One query for name and count
     queryset = JobCategory.objects.annotate(job_count=Count("jobs")).all()
     serializer_class = JobCategorySerializer
     pagination_class = None

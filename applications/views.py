@@ -10,6 +10,8 @@ from applications.permissions import IsJobSeekerOrReadOnly
 from jobs.models import Job
 from drf_yasg.utils import swagger_auto_schema
 
+# Create your views here.
+
 class ApplicationViewSet(ModelViewSet):
     """
     ViewSet for applications.
@@ -19,10 +21,6 @@ class ApplicationViewSet(ModelViewSet):
     """
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated, IsJobSeekerOrReadOnly]
-
-    # 💡 OPTIMIZATION 1: Global Ordering
-    # Adding a default ordering ensures consistent results and prevents database 
-    # sequence issues when grouping on the frontend.
     ordering = ['-applied_at']
 
     def get_queryset(self):
@@ -31,10 +29,6 @@ class ApplicationViewSet(ModelViewSet):
 
         user = self.request.user
         
-        # 💡 OPTIMIZATION 2: Eager Loading (SQL JOINs)
-        # Using select_related here joins the Applicant, Job, and Employer tables.
-        # This solves the N+1 problem, meaning for 100 applications, 
-        # we do 1 query instead of 301 queries.
         queryset = Application.objects.select_related(
             'applicant', 
             'job', 
@@ -46,8 +40,6 @@ class ApplicationViewSet(ModelViewSet):
 
         user_role = getattr(user, "role", "").lower()
 
-        # 💡 OPTIMIZATION 3: Role-based filtering logic
-        # We handle the primary security filter first.
         if user_role == "seeker":
             queryset = queryset.filter(applicant=user)
         elif user_role == "employer":
@@ -57,8 +49,6 @@ class ApplicationViewSet(ModelViewSet):
         else:
             return Application.objects.none()
 
-        # 💡 OPTIMIZATION 4: Streamlined Parameter Filtering
-        # Using dictionary unpacking for filters to keep it readable and dry.
         filters = {}
         
         job_employer_id = self.request.query_params.get('job__employer')
@@ -71,9 +61,6 @@ class ApplicationViewSet(ModelViewSet):
 
         return queryset.filter(**filters)
 
-    # 💡 OPTIMIZATION 5: Pagination Bypass
-    # When the frontend requests 'no_pagination=true', we return the full list.
-    # This is required for your nested grouping (Company > Job > Applicants) to work.
     def paginate_queryset(self, queryset):
         if 'no_pagination' in self.request.query_params:
             return None
@@ -90,8 +77,6 @@ class ApplicationViewSet(ModelViewSet):
         if not job_id:
             raise ValidationError("Missing job id in URL.")
 
-        # 💡 OPTIMIZATION 6: Minimal Query Check
-        # .exists() is faster than fetching the whole object to check existence.
         if Application.objects.filter(job_id=job_id, applicant=user).exists():
             raise ValidationError("You have already applied for this job.")
 
