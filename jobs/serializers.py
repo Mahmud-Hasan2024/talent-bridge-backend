@@ -28,9 +28,9 @@ class JobSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def update(self, instance, validated_data):
-        """Only admins can toggle is_active / is_featured."""
         request = self.context.get('request')
-        if request and not request.user.groups.filter(name='Admin').exists():
+        user_role = getattr(request.user, 'role', '').lower()
+        if request and user_role != 'admin':
             validated_data.pop('is_active', None)
             validated_data.pop('is_featured', None)
         return super().update(instance, validated_data)

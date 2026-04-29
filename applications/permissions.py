@@ -1,3 +1,4 @@
+from rest_framework import permissions
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 class IsJobSeekerOrReadOnly(BasePermission):
@@ -37,3 +38,10 @@ class IsJobSeekerOrReadOnly(BasePermission):
 
         # Deny all others
         return False
+
+class IsAdminOrOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        user_role = getattr(request.user, 'role', '').lower()
+        if user_role == 'admin':
+            return True
+        return hasattr(obj, 'employer') and obj.employer == request.user
