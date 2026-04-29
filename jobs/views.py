@@ -25,9 +25,7 @@ from django.conf import settings as main_settings
 from rest_framework import status
 
 
-# -----------------------------
-# Job ViewSet
-# -----------------------------
+# Create your views here.
 
 
 class JobViewSet(ModelViewSet):
@@ -36,30 +34,28 @@ class JobViewSet(ModelViewSet):
     filterset_class = JobFilter
     search_fields = ["title", "company_name", "description", "location"]
     pagination_class = DefaultPagination
-    
-    # 💡 OPTIMIZATION 1: Consistent Default Ordering at Class Level
-    ordering = ['-created_at']
 
     def get_queryset(self):
         user = self.request.user
         
-        # 💡 OPTIMIZATION 2: Eager Loading (SQL JOINs)
-        # select_related joins 'category' and 'employer' into a single query.
-        # This prevents the N+1 problem where 20 jobs would cause 41 queries.
-        queryset = Job.objects.select_related("category", "employer")
+        # 💡 OPTIMIZATION: Eager Loading
+        # We join 'category' and 'employer' here. 
+        # Since your model HAS 'employer = models.ForeignKey...', this is now safe.
+        queryset = Job.objects.select_related("category", "employer").all().order_by("-created_at")
 
         if not user.is_authenticated:
             return queryset
 
         user_role = getattr(user, 'role', '').lower()
         
-        # 💡 OPTIMIZATION 3: Role-based filtering logic
+        # Admins see everything
         if user_role == 'admin':
             return queryset
         
+        # Employer filtering logic
         employer_param = self.request.query_params.get('employer')
         if user_role == 'employer' and employer_param:
-            # Security: Ensure employers only see their own jobs
+            # Only allow filtering if the ID matches the logged-in user
             if str(user.id) == employer_param:
                 return queryset.filter(employer=user)
             return queryset.none()
@@ -71,7 +67,6 @@ class JobViewSet(ModelViewSet):
             return [IsAuthenticatedOrReadOnly()]
         return [IsAuthenticated(), IsAdminOrOwner()]
 
-    # 💡 OPTIMIZATION 4: Pagination Bypass
     def paginate_queryset(self, queryset):
         if 'no_pagination' in self.request.query_params:
             return None
@@ -83,12 +78,11 @@ class JobViewSet(ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", "").lower() != "seeker":
             return Response({"has_applied": False})
         
-        # 💡 OPTIMIZATION 5: Database exists() check
-        # .exists() is much faster than fetching the object to check for it.
+        # 💡 OPTIMIZATION: .exists() is faster than .count() or fetching
         has_applied = Application.objects.filter(job_id=pk, applicant=user).exists()
         return Response({"has_applied": has_applied})
 
-    # (initiate_feature_payment left untouched as requested)
+    # initiate_feature_payment remains EXACTLY as your original
     @action(detail=True, methods=['post'], url_path='feature-payment')
     def initiate_feature_payment(self, request, pk=None):
         job = self.get_object()
@@ -108,15 +102,9 @@ class JobViewSet(ModelViewSet):
         response = sslcz.createSession(post_body)
         return Response({"payment_url": response['GatewayPageURL']}) if response.get("status") == 'SUCCESS' else Response(status=400)
 
-
-# -----------------------------
-# JobCategory ViewSet
-# -----------------------------
-
 class JobCategoryViewSet(ModelViewSet):
-    # 💡 OPTIMIZATION 6: Efficient Count via Annotation
-    # This fetches the count in the primary query rather than hitting the DB for each category row.
-    queryset = JobCategory.objects.annotate(job_count=Count("jobs"))
+    # 💡 OPTIMIZATION: One query for name and count
+    queryset = JobCategory.objects.annotate(job_count=Count("jobs")).all()
     serializer_class = JobCategorySerializer
     pagination_class = None
 
