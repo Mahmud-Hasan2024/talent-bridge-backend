@@ -38,7 +38,11 @@ class JobSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class SimpleJobDetailSerializer(serializers.ModelSerializer):
+    """Serializer used for nesting inside ApplicationSerializer."""
     employer_name = serializers.ReadOnlyField(source='employer.get_full_name')
+    
     class Meta:
         model = Job
-        fields = ('id', 'title', 'company_name', 'employer_name')
+        fields = (
+            'id', 'title', 'company_name', 'employer_name', 'location', 'employment_type', 'remote_option'
+        )
