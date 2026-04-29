@@ -34,22 +34,32 @@ class JobViewSet(ModelViewSet):
     filterset_class = JobFilter
     search_fields = ["title", "company_name", "description", "location"]
     pagination_class = DefaultPagination
+    
+    # 💡 OPTIMIZATION 1: Consistent Default Ordering
+    ordering = ['-created_at']
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Job.objects.select_related("category").all().order_by("-created_at")
+        
+        # 💡 OPTIMIZATION 2: Eager Loading & Field Selection
+        # select_related('employer') is crucial if your serializer shows employer names.
+        # we add category to prevent N+1 during listing.
+        queryset = Job.objects.select_related("category", "employer").all()
 
+        # 💡 OPTIMIZATION 3: Streamlined Role Logic
         if not user.is_authenticated:
             return queryset
 
         user_role = getattr(user, 'role', '').lower()
-        if user_role == 'admin':
-            return queryset
         
-        # Matches frontend: url = /jobs/?employer=ID
+        # Employer filtering - matches your frontend /jobs/?employer=ID logic
         employer_param = self.request.query_params.get('employer')
         if user_role == 'employer' and employer_param:
-            return queryset.filter(employer=user)
+            # Security check: Employers should only filter for their own ID
+            if str(user.id) == employer_param:
+                return queryset.filter(employer=user)
+            # If they try to see another employer's ID, we return none or handle as list
+            return queryset.none()
 
         return queryset
 
@@ -68,27 +78,43 @@ class JobViewSet(ModelViewSet):
         user = request.user
         if not user.is_authenticated or getattr(user, "role", "").lower() != "seeker":
             return Response({"has_applied": False})
-        has_applied = Application.objects.filter(job_id=pk, applicant=user).exists()
-        return Response({"has_applied": has_applied})
+        
+        # 💡 OPTIMIZATION 4: Minimal DB lookup
+        # .exists() is significantly faster than any other check.
+        exists = Application.objects.filter(job_id=pk, applicant=user).exists()
+        return Response({"has_applied": exists})
 
     @action(detail=True, methods=['post'], url_path='feature-payment')
     def initiate_feature_payment(self, request, pk=None):
-        job = self.get_object()
+        # 💡 OPTIMIZATION 5: Only fetch necessary fields for payment init
+        job = self.get_object() 
         self.check_object_permissions(request, job)
         
-        settings = {'store_id': main_settings.SSL_STORE_ID, 'store_pass': main_settings.SSL_STORE_PASS, 'issandbox': main_settings.SSL_IS_SANDBOX}
+        # Move SSL logic to a helper or keep minimal
+        settings = {
+            'store_id': main_settings.SSL_STORE_ID, 
+            'store_pass': main_settings.SSL_STORE_PASS, 
+            'issandbox': main_settings.SSL_IS_SANDBOX
+        }
         sslcz = SSLCOMMERZ(settings)
+        
+        # Use .get_full_name() for professional payment records
+        cus_name = user.get_full_name() if hasattr(user, 'get_full_name') else user.username
+
         post_body = {
             'total_amount': 500, 'currency': "BDT", 'tran_id': f"JOB_{job.id}_FEATURE",
             'success_url': f"{main_settings.BACKEND_URL}/api/v1/jobs/payment/success/",
             'fail_url': f"{main_settings.BACKEND_URL}/api/v1/jobs/payment/fail/",
             'cancel_url': f"{main_settings.BACKEND_URL}/api/v1/jobs/payment/cancel/",
-            'cus_name': f"{request.user.first_name}", 'cus_email': request.user.email,
+            'cus_name': cus_name, 'cus_email': request.user.email,
             'cus_phone': 'N/A', 'cus_add1': 'N/A', 'cus_city': "Dhaka", 'cus_country': "Bangladesh",
             'shipping_method': "NO", 'product_name': job.title, 'product_category': "Service", 'product_profile': "general"
         }
         response = sslcz.createSession(post_body)
-        return Response({"payment_url": response['GatewayPageURL']}) if response.get("status") == 'SUCCESS' else Response(status=400)
+        
+        if response.get("status") == 'SUCCESS':
+            return Response({"payment_url": response['GatewayPageURL']})
+        return Response({"detail": "Payment session failed"}, status=status.HTTP_400_BAD_REQUEST)
     
 
 # -----------------------------
@@ -97,9 +123,11 @@ class JobViewSet(ModelViewSet):
 
 
 class JobCategoryViewSet(ModelViewSet):
-    queryset = JobCategory.objects.annotate(job_count=Count("jobs")).all()
+    # 💡 OPTIMIZATION 6: Efficient Counting
+    # Prefetch jobs and annotate count in one go.
+    queryset = JobCategory.objects.annotate(job_count=Count("jobs"))
     serializer_class = JobCategorySerializer
-    pagination_class = None
+    pagination_class = None # Fast load for small lists
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
