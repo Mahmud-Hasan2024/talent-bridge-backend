@@ -42,7 +42,6 @@ POST /accounts/login/
 - Hosted on **Vercel**
 - Backend powered by **Django + DRF + Djoser (JWT)**
 - Database: **PostgreSQL (Production)**
-- Payments: **SSLCommerz Sandbox (Configured)**
 - Version: `v1` (Base URL: `/api/v1/`)
 
 ---

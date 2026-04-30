@@ -3,7 +3,7 @@
 # 🌐 Talent Bridge Job Portal API
 
 Talent Bridge is a **Django REST Framework–powered job portal** where **Employers** can post jobs, **Job Seekers** can apply or withdraw applications, and **Admins** can manage all platform activities.  
-It includes **JWT authentication**, **role-based dashboards**, **Swagger API documentation**, and **SSLCommerz payment gateway** integration.
+It includes **JWT authentication**, **role-based dashboards** and **Swagger API documentation**.
 
 ---
 
@@ -34,7 +34,6 @@ Use these credentials to log in and explore the API in Swagger or Postman.
 - 💼 **Job Management:** Employers can post, edit, and delete job listings
 - 📄 **Applications:** Job Seekers can apply or withdraw job applications
 - ⭐ **Reviews:** Job Seekers can review employers
-- 💳 **Payments:** SSLCommerz gateway integration
 - 📊 **Dashboards:** Role-based analytics and activity overview
 - 🔐 **JWT Authentication (Djoser)**
 - 🧾 **Swagger API Docs (drf-yasg)**
@@ -49,7 +48,6 @@ Use these credentials to log in and explore the API in Swagger or Postman.
 | Backend        | Django, Django REST Framework |
 | Authentication | Djoser + JWT                  |
 | Database       | PostgreSQL / SQLite           |
-| Payments       | SSLCommerz                    |
 | API Docs       | Swagger (drf-yasg)            |
 | Deployment     | Vercel                        |
 
@@ -176,13 +174,6 @@ This will:
 
 - Delete existing records
 - Create sample employers, seekers, jobs, and applications
-
----
-
-## 💳 Payments (SSLCommerz)
-
-SSLCommerz integration is configured for secure transaction handling.  
-Endpoints are available under `/payments/` (sandbox-ready).
 
 ---
 
