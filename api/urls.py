@@ -1,6 +1,5 @@
 from django.urls import path, include
-from jobs.views import (JobViewSet, JobCategoryViewSet, feature_payment_success,
-                        feature_payment_fail, feature_payment_cancel)
+from jobs.views import (JobViewSet, JobCategoryViewSet)
 from reviews.views import EmployerReviewViewSet
 from applications.views import ApplicationViewSet
 from dashboard.views import DashboardViewSet
