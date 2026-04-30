@@ -75,21 +75,21 @@ class JobViewSet(ModelViewSet):
         has_applied = Application.objects.filter(job_id=pk, applicant=user).exists()
         return Response({"has_applied": has_applied})
 
-    @action(detail=True, methods=['post'], url_path='make-featured', permission_classes=[IsAuthenticated])
-    def make_featured(self, request, pk=None):
-        """
-        Directly marks a job as featured without requiring payment.
-        """
-        job = self.get_object()
-        self.check_object_permissions(request, job)
+    # @action(detail=True, methods=['post'], url_path='make-featured', permission_classes=[IsAuthenticated])
+    # def make_featured(self, request, pk=None):
+    #     """
+    #     Directly marks a job as featured without requiring payment.
+    #     """
+    #     job = self.get_object()
+    #     self.check_object_permissions(request, job)
         
-        if job.is_featured:
-            return Response({"message": "This job is already featured."}, status=status.HTTP_200_OK)
+    #     if job.is_featured:
+    #         return Response({"message": "This job is already featured."}, status=status.HTTP_200_OK)
 
-        job.is_featured = True
-        job.save()
+    #     job.is_featured = True
+    #     job.save()
         
-        return Response({"message": "Job has been successfully featured."}, status=status.HTTP_200_OK)
+    #     return Response({"message": "Job has been successfully featured."}, status=status.HTTP_200_OK)
 
 # -----------------------------
 # JobCategory ViewSet

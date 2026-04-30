@@ -23,8 +23,4 @@ urlpatterns = [
     path('', include(jobs_router.urls)),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
-
-    path("jobs/payment/success/", feature_payment_success, name="job-payment-success"),
-    path("jobs/payment/fail/", feature_payment_fail, name="job-payment-fail"),
-    path("jobs/payment/cancel/", feature_payment_cancel, name="job-payment-cancel"),
 ]
