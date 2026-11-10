@@ -1,24 +1,15 @@
-from django.forms import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
 from applications.models import Application
 from applications.serializers import ApplicationSerializer
 from applications.permissions import IsJobSeekerOrReadOnly
-from jobs.models import Job
 from drf_yasg.utils import swagger_auto_schema
 
-# Create your views here.
 
 class ApplicationViewSet(ModelViewSet):
-    """
-    ViewSet for applications.
-    - Job seekers see only their own applications.
-    - Employers see applications to their own jobs.
-    - Admins see everything.
-    """
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated, IsJobSeekerOrReadOnly]
     ordering = ['-applied_at']
@@ -28,15 +19,15 @@ class ApplicationViewSet(ModelViewSet):
             return Application.objects.none()
 
         user = self.request.user
-        
-        queryset = Application.objects.select_related(
-            'applicant', 
-            'job', 
-            'job__employer'
-        )
-
         if not user.is_authenticated:
             return Application.objects.none()
+
+        queryset = Application.objects.select_related(
+            'applicant',
+            'job',
+            'job__employer',
+            'job__category',
+        ).order_by('-applied_at')
 
         user_role = getattr(user, "role", "").lower()
 
@@ -45,21 +36,24 @@ class ApplicationViewSet(ModelViewSet):
         elif user_role == "employer":
             queryset = queryset.filter(job__employer=user)
         elif user_role == "admin":
-            pass # Admins see all
+            pass
         else:
             return Application.objects.none()
 
-        filters = {}
-        
-        job_employer_id = self.request.query_params.get('job__employer')
-        if job_employer_id and (user_role == "admin" or str(user.id) == job_employer_id):
-            filters['job__employer_id'] = job_employer_id
-        
-        applicant_id = self.request.query_params.get('applicant')
-        if applicant_id and (user_role == "admin" or str(user.id) == applicant_id):
-            filters['applicant_id'] = applicant_id
+        # Support ?job_pk= (nested route) or ?job= / ?job_id=
+        job_pk = self.kwargs.get("job_pk") or self.request.query_params.get("job") or self.request.query_params.get("job_id")
+        if job_pk:
+            queryset = queryset.filter(job_id=job_pk)
 
-        return queryset.filter(**filters)
+        job_employer_id = self.request.query_params.get('job__employer')
+        if job_employer_id and (user_role == "admin" or str(user.id) == str(job_employer_id)):
+            queryset = queryset.filter(job__employer_id=job_employer_id)
+
+        applicant_id = self.request.query_params.get('applicant')
+        if applicant_id and (user_role == "admin" or str(user.id) == str(applicant_id)):
+            queryset = queryset.filter(applicant_id=applicant_id)
+
+        return queryset
 
     def paginate_queryset(self, queryset):
         if 'no_pagination' in self.request.query_params:
@@ -67,7 +61,7 @@ class ApplicationViewSet(ModelViewSet):
         return super().paginate_queryset(queryset)
 
     def perform_create(self, serializer):
-        job_id = self.kwargs.get("job_pk")
+        job_id = self.kwargs.get("job_pk") or self.request.data.get("job")
         user = self.request.user
         user_role = getattr(user, "role", "").lower()
 
@@ -75,12 +69,11 @@ class ApplicationViewSet(ModelViewSet):
             raise PermissionDenied("Only job seekers can apply for jobs.")
 
         if not job_id:
-            raise ValidationError("Missing job id in URL.")
+            raise ValidationError({"detail": "Missing job ID in URL or request body."})
 
         if Application.objects.filter(job_id=job_id, applicant=user).exists():
-            raise ValidationError("You have already applied for this job.")
+            raise ValidationError({"detail": "You have already applied for this job."})
 
-        # Using job_id=job_id directly avoids an extra 'Job.objects.get' query.
         serializer.save(job_id=job_id, applicant=user)
 
     @swagger_auto_schema(operation_summary="Update an application (status)")
@@ -89,12 +82,11 @@ class ApplicationViewSet(ModelViewSet):
         application = self.get_object()
         user_role = getattr(user, "role", "").lower()
 
-        # Security check
         if user_role == "employer" and application.job.employer != user:
             raise PermissionDenied("You can only update applications for your own jobs.")
         elif user_role not in ["employer", "admin"]:
             raise PermissionDenied("Only employers or admins can update application status.")
-        
+
         serializer.save()
 
     @swagger_auto_schema(
@@ -107,11 +99,10 @@ class ApplicationViewSet(ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", "").lower() != "seeker":
             return Response({"can_review": False})
 
-        # Logic remains the same, leveraging DB indices
         can_review = Application.objects.filter(
             job_id=job_id,
             applicant=user,
-            status="accepted" # Ensure this matches your model's constant
+            status="accepted"
         ).exists()
 
         return Response({"can_review": can_review})
@@ -124,7 +115,7 @@ class ApplicationViewSet(ModelViewSet):
         ]
         return Response(choices)
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post", "delete"], url_path="withdraw")
     def withdraw(self, request, pk=None, job_pk=None):
         user = request.user
         application = self.get_object()
@@ -137,5 +128,5 @@ class ApplicationViewSet(ModelViewSet):
             return Response({"detail": f"Cannot withdraw application with status '{application.status}'."}, status=400)
 
         application.status = "withdrawn"
-        application.save()
-        return Response({"detail": "Application successfully withdrawn."})
+        application.save(update_fields=["status"])
+        return Response({"detail": "Application successfully withdrawn.", "status": "withdrawn"})

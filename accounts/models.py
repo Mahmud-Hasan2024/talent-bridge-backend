@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, Group
 from accounts.managers import CustomUserManager
 from cloudinary.models import CloudinaryField
 
+
 class User(AbstractUser):
     ROLE_ADMIN = 'admin'
     ROLE_EMPLOYER = 'employer'
@@ -39,11 +40,6 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.email} ({self.get_role_display()})"
 
-    def save(self, *args, **kwargs):
-        """Keep Django groups in sync with role field."""
-        super().save(*args, **kwargs)
-        self.sync_group_with_role()
-
     def sync_group_with_role(self):
         """Ensure role and groups are always in sync."""
         group_mapping = {
@@ -55,7 +51,7 @@ class User(AbstractUser):
         if not desired_group_name:
             return
 
-        # Remove user from all role groups
-        self.groups.clear()
         group, _ = Group.objects.get_or_create(name=desired_group_name)
-        self.groups.add(group)
+        if not self.groups.filter(id=group.id).exists():
+            self.groups.clear()
+            self.groups.add(group)

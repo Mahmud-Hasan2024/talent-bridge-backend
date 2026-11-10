@@ -3,6 +3,7 @@ from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from djoser.serializers import UserSerializer as BaseUserSerializer
 from accounts.models import User
 
+
 class UserCreateSerializer(BaseUserCreateSerializer):
     role = serializers.ChoiceField(choices=[('employer', 'Employer'), ('seeker', 'Job Seeker')])
 
@@ -14,18 +15,9 @@ class UserCreateSerializer(BaseUserCreateSerializer):
         )
 
     def create(self, validated_data):
-        """Prevent users from creating admin accounts manually."""
         if validated_data.get('role') == 'admin':
             raise serializers.ValidationError("You cannot create an admin account.")
         return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        request = self.context.get('request')
-
-        if 'role' in validated_data and not request.user.has_perm('accounts.is_admin_only'):
-            validated_data.pop('role')
-
-        return super().update(instance, validated_data)
 
 
 class UserSerializer(BaseUserSerializer):
@@ -34,25 +26,18 @@ class UserSerializer(BaseUserSerializer):
         model = User
         fields = (
             'id', 'email', 'first_name', 'last_name',
-            'address', 'phone_number', 'role', 'is_active',
+            'address', 'phone_number', 'role', 'is_active', 'date_joined',
         )
-        read_only_fields = ('email',)
+        read_only_fields = ('email', 'date_joined')
 
     def update(self, instance, validated_data):
-        """Allow only admins (with custom permission) to change role."""
         request = self.context.get('request')
+        if 'role' in validated_data and not (request and getattr(request.user, 'role', '') == 'admin'):
+            validated_data.pop('role', None)
+        return super().update(instance, validated_data)
 
-        if 'role' in validated_data and not request.user.has_perm('accounts.is_admin_only'):
-            validated_data.pop('role')
 
-        instance = super().update(instance, validated_data)
-
-        instance.sync_group_with_role()
-        return instance
-    
-    
 class SimpleUserDetailSerializer(serializers.ModelSerializer):
-    """Serializer used for nesting inside ApplicationSerializer."""
     class Meta:
         model = User
         fields = ('id', 'first_name', 'last_name', 'email')

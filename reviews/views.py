@@ -1,5 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import PermissionDenied
 from reviews.models import EmployerReview
 from reviews.serializers import EmployerReviewSerializer
@@ -12,7 +12,7 @@ class EmployerReviewViewSet(ModelViewSet):
     Reviews for an employer/job. Expects `job_pk` from nested route.
     """
     serializer_class = EmployerReviewSerializer
-    permission_classes = [IsAuthenticated, CanReviewAcceptedJob]
+    permission_classes = [IsAuthenticatedOrReadOnly, CanReviewAcceptedJob]
 
     def get_queryset(self):
         # Avoid running when drf_yasg generates schema

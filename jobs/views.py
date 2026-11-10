@@ -1,10 +1,9 @@
-from django.http import HttpResponseRedirect
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from django.db.models import Count
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from django.db.models import Count, F
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -12,46 +11,52 @@ from jobs.models import Job, JobCategory
 from jobs.serializers import JobSerializer, JobCategorySerializer
 from jobs.filters import JobFilter
 from jobs.paginations import DefaultPagination
-from jobs.permissions import IsAdminOrOwner
+from jobs.permissions import IsAdminOrOwner, IsAdminOnly
+from applications.models import Application
 
-try:
-    from applications.models import Application
-except ImportError:
-    Application = None
-
-# Create your views here.
-
-# -----------------------------
-# Job ViewSet
-# -----------------------------
 
 class JobViewSet(ModelViewSet):
-    queryset = Job.objects.select_related("category", "employer").all().order_by("-created_at")
+    queryset = Job.objects.select_related("category", "employer").all().order_by("-is_featured", "-created_at")
     serializer_class = JobSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = JobFilter
     search_fields = ["title", "company_name", "description", "location"]
-    ordering_fields = ["created_at", "company_name", "title"]
+    ordering_fields = ["created_at", "company_name", "title", "salary"]
     pagination_class = DefaultPagination
 
     def get_queryset(self):
         user = self.request.user
         queryset = super().get_queryset()
 
+        # Check ?featured=true explicitly as well
+        featured_param = self.request.query_params.get('featured')
+        if featured_param and featured_param.lower() == 'true':
+            queryset = queryset.filter(is_featured=True)
+
         if not user.is_authenticated:
-            return queryset
+            return queryset.filter(is_active=True)
 
         user_role = getattr(user, 'role', '').lower()
         if user_role == 'admin':
             return queryset
-        
+
         employer_param = self.request.query_params.get('employer')
         if user_role == 'employer' and employer_param:
-            if str(user.id) == employer_param:
+            if str(user.id) == str(employer_param):
                 return queryset.filter(employer=user)
             return queryset.none()
 
-        return queryset
+        return queryset.filter(is_active=True)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Increment views_count atomically in DB
+        Job.objects.filter(pk=instance.pk).update(views_count=F('views_count') + 1)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        serializer.save(employer=self.request.user)
 
     def paginate_queryset(self, queryset):
         if 'no_pagination' in self.request.query_params:
@@ -59,48 +64,28 @@ class JobViewSet(ModelViewSet):
         return super().paginate_queryset(queryset)
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve", "has_applied"]:
+        if self.action in ["list", "retrieve"]:
             return [IsAuthenticatedOrReadOnly()]
+        if self.action == "has_applied":
+            return [IsAuthenticated()]
         return [IsAuthenticated(), IsAdminOrOwner()]
 
     @action(detail=True, methods=['get'], url_path='has-applied', permission_classes=[IsAuthenticated])
     def has_applied(self, request, pk=None):
         user = request.user
         if not user.is_authenticated or getattr(user, "role", "").lower() != "seeker":
-            return Response({"has_applied": False, "detail": "Authentication required or user is not a Job Seeker."}, status=status.HTTP_403_FORBIDDEN)
-        
-        if not Application:
-            return Response({"detail": "Application model not loaded."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"has_applied": False}, status=status.HTTP_200_OK)
 
         has_applied = Application.objects.filter(job_id=pk, applicant=user).exists()
         return Response({"has_applied": has_applied})
 
-    # @action(detail=True, methods=['post'], url_path='make-featured', permission_classes=[IsAuthenticated])
-    # def make_featured(self, request, pk=None):
-    #     """
-    #     Directly marks a job as featured without requiring payment.
-    #     """
-    #     job = self.get_object()
-    #     self.check_object_permissions(request, job)
-        
-    #     if job.is_featured:
-    #         return Response({"message": "This job is already featured."}, status=status.HTTP_200_OK)
-
-    #     job.is_featured = True
-    #     job.save()
-        
-    #     return Response({"message": "Job has been successfully featured."}, status=status.HTTP_200_OK)
-
-# -----------------------------
-# JobCategory ViewSet
-# -----------------------------
 
 class JobCategoryViewSet(ModelViewSet):
-    queryset = JobCategory.objects.annotate(job_count=Count("jobs")).all()
+    queryset = JobCategory.objects.annotate(job_count=Count("jobs")).all().order_by("name")
     serializer_class = JobCategorySerializer
     pagination_class = None
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [IsAuthenticatedOrReadOnly()]
-        return [IsAuthenticated(), IsAdminOrOwner()]
+        return [IsAuthenticated(), IsAdminOnly()]

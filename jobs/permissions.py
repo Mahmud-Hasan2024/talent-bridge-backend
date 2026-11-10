@@ -1,35 +1,33 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 class IsAdminOrEmployer(BasePermission):
-    """Allow Admins and Employers to create/update jobs."""
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
         user = request.user
         return user.is_authenticated and (
-            user.groups.filter(name__in=['Admin', 'Employer']).exists()
+            getattr(user, 'role', '').lower() in ['admin', 'employer']
+            or user.groups.filter(name__in=['Admin', 'Employer']).exists()
         )
 
-
 class IsAdminOnly(BasePermission):
-    """Only Admins can perform certain operations."""
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
         user = request.user
-        return user.is_authenticated and user.groups.filter(name='Admin').exists()
-    
+        return user.is_authenticated and (
+            getattr(user, 'role', '').lower() == 'admin'
+            or user.is_superuser
+            or user.groups.filter(name='Admin').exists()
+        )
 
 class IsAdminOrOwner(BasePermission):
-    """Admin can do anything. Employer can only modify own jobs."""
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
+        return bool(request.user and request.user.is_authenticated)
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        if request.user.role == 'admin':
+        if getattr(request.user, 'role', '').lower() == 'admin' or request.user.is_superuser:
             return True
-        return obj.employer == request.user
-
-
+        return getattr(obj, 'employer', None) == request.user

@@ -65,7 +65,7 @@ cd talent-bridge-api
 ### 2️⃣ Create Virtual Environment
 
 ```bash
-python -m venv venv
+python3 -m venv venv
 venv\Scripts\activate  # Windows
 # or
 source venv/bin/activate  # macOS/Linux
@@ -80,14 +80,14 @@ pip install -r requirements.txt
 ### 4️⃣ Migrate Database
 
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+python3 manage.py makemigrations
+python3 manage.py migrate
 ```
 
 ### 5️⃣ Create Superuser
 
 ```bash
-python manage.py createsuperuser
+python3 manage.py createsuperuser
 ```
 
 ### 6️⃣ Run Development Server
