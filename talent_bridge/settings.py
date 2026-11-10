@@ -84,11 +84,11 @@ DATABASES = {
         'PASSWORD': config('password'),
         'HOST': config('host'),
         'PORT': config('port'),
-        'CONN_MAX_AGE': 60,
+        # 'CONN_MAX_AGE': 60,
     }
 }
 
-# Redis Cache (Automatically falls back to LocMemCache if REDIS_URL is not set)
+# # Redis Cache (Automatically falls back to LocMemCache if REDIS_URL is not set)
 # REDIS_URL = config('REDIS_URL', default='')
 # if REDIS_URL:
 #     CACHES = {
@@ -113,6 +113,13 @@ DATABASES = {
 # CELERY_BROKER_URL = REDIS_URL or 'memory://'
 # CELERY_RESULT_BACKEND = REDIS_URL or 'cache+memory://'
 # CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=not bool(REDIS_URL), cast=bool)
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'talent-bridge-cache',
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -198,6 +205,6 @@ BACKEND_URL = config("BACKEND_URL", default="https://talent-bridge-api.vercel.ap
 FRONTEND_URL = config("FRONTEND_URL", default="https://talent-bridge-frontend-psi.vercel.app/").rstrip("/")
 
 # SSLCOMMERZ Settings (Matched to your exact .env variable names!)
-SSL_STORE_ID = config("SSL_STORE_ID", default="bytef68b5005fc30d7")
-SSL_STORE_PASS = config("SSL_STORE_PASS", default="bytef68b5005fc30d7@ssl")
+SSL_STORE_ID = config("SSL_STORE_ID")
+SSL_STORE_PASS = config("SSL_STORE_PASS")
 SSL_IS_SANDBOX = config("SSL_IS_SANDBOX", default=True, cast=bool)
